@@ -1,6 +1,6 @@
-(defproject clj-rad "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+(defproject clj-rad "0.1.0"
+  :description "Clojure wrapper for Netflix Robust Anomaly Detection (RAD) library"
+  :url "http://github.com/uswitch/clj-rad"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :resource-paths ["resources/surus-0.1.4.jar"]
