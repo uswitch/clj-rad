@@ -20,6 +20,11 @@ Not yet released to clojars
 {:date 20150107 :a 1 :b 1 :value 15}])
 
 (rad/rpca-outliers-daily data 7 [:a :b])
+; {:group       {:a 1 :b 1}
+;  :x-transform [...]
+;  :rsvd-l      [...]
+;  :rsvd-s      [...]
+;  :rsvd-e      [...]}
 ```
 
 ## License
