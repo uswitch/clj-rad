@@ -10,6 +10,8 @@ Add the following to your [Leiningen](http://github.com/technomancy/leiningen) `
 
 ## Usage
 
+### Code
+
 ```clojure
 (:require [clj-rad.core :as rad])
 
@@ -22,12 +24,25 @@ Add the following to your [Leiningen](http://github.com/technomancy/leiningen) `
 {:date 20150107 :a 1 :b 1 :value 15}])
 
 (rad/rpca-outliers-daily data 7 [:a :b])
-; {:group       {:a 1 :b 1}
-;  :x-transform [...]
-;  :rsvd-l      [...]
-;  :rsvd-s      [...]
-;  :rsvd-e      [...]}
+; {:group                  {:a 1 :b 1}
+;  :raw-data               [...]
+;  :low-rank-approximation [...]
+;  :sparse                 [...]
+;  :error                  [...]}
 ```
+
+### Analysis
+
+The result returned contains a group and 4 timeseries collections. Each could be plotted on the same timeseries chart.
+
+* `:raw-data` this is the original time series data for this group
+* `:low-rank-approximation` this is an approximation of the raw time series data
+* `:sparse` these are the outliers
+* `:error` this is the acceptable error due to random variance
+
+At each point in time the oringal data value (X) should be decomposable to it's low rank approximation (L) and it's sparse (S) components, allowing for the error i (E) value.
+
+Such that `X=L+S+E`
 
 ## License
 

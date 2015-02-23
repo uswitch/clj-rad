@@ -5,17 +5,17 @@
 (def LPENALTY_DEFAULT_NO_DIFF 1.0)
 (def SPENALTY_DEFAULT_NO_DIFF 1.4)
 
-(defn lpenalty []
+(defn- lpenalty []
   LPENALTY_DEFAULT_NO_DIFF)
 
-(defn spenalty [ncols nrows]
+(defn- spenalty [ncols nrows]
   (/ SPENALTY_DEFAULT_NO_DIFF (math/sqrt (max ncols nrows))))
 
-(defn unique-dates 
+(defn- unique-dates
   [data]
   (into #{} (map :date data)))
 
-(defn pad-missing-dates
+(defn- pad-missing-dates
   [complete-dateset data]
   (->> data
        unique-dates
@@ -23,14 +23,14 @@
        (map #(hash-map :date % :value 0))
        (into data)))
 
-(defn prepare 
+(defn- prepare
   [date-set data]
   (->> data
       (pad-missing-dates date-set)
       (sort-by :date)
       (mapv :value)))
 
-(defn statistics 
+(defn- statistics
   [data]
   (let [n (count data)
         mean (/ (reduce + data) n)
@@ -38,28 +38,35 @@
         stdev (math/sqrt variance)]
     {:mean mean :stdev stdev}))
 
-(defn transform 
-  [{:keys [mean stdev]} data]
-    (mapv #(/ (- % mean) stdev) data))
+(defn- normalise [mean stdev]
+  (fn [x] (/ (- x mean) stdev)))
 
-(defn to-matrix 
+(defn- un-normalise [mean stdev]
+  (fn [x] (+ (* x stdev) mean)))
+
+(defn- transform
+  [{:keys [mean stdev]} data]
+    (mapv (normalise mean stdev) data))
+
+(defn- to-matrix
   [ncols data]
   (into-array (map double-array (partition-all ncols data))))
 
-(defn rpca 
+(defn- untransform
+  [{:keys [mean stdev]} {:keys [raw-data low-rank-approximation sparse error] :as data}]
+  (merge data {:raw-data               (mapv (un-normalise mean stdev) raw-data)
+               :low-rank-approximation (mapv (un-normalise mean stdev) low-rank-approximation)
+               :sparse                 (mapv #(* stdev %) sparse)
+               :error                  (mapv #(* stdev %) error)}))
+
+(defn rpca
   [nrows ncols data]
   (let [rsvd (org.surus.math.RPCA. (to-matrix ncols data) (lpenalty) (spenalty nrows ncols))
         unroll (fn [d] (for [row (.getData d) col row] col))]
-    {:x-transform data
-     :rsvd-l (unroll (.. rsvd getL))
-     :rsvd-s (unroll (.. rsvd getS))
-     :rsvd-e (unroll (.. rsvd getE))}))
-
-(defn untransform
-  [{:keys [mean stdev]} {:keys [rsvd-l rsvd-s rsvd-e] :as data}]
-  (merge data {:rsvd-l (map #(+ mean (* stdev %)) rsvd-l)
-               :rsvd-s (map #(* stdev %) rsvd-s)
-               :rsvd-e (map #(* stdev %) rsvd-e)}))
+    {:raw-data               data
+     :low-rank-approximation (unroll (.. rsvd getL))
+     :sparse                 (unroll (.. rsvd getS))
+     :error                  (unroll (.. rsvd getE))}))
 
 (defn rad [n-days complete-dateset data]
   (let [clean-data (prepare complete-dateset data)
