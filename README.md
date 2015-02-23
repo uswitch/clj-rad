@@ -4,7 +4,9 @@ A clojure wrapper of the Netflix Surus Robust Anamoly Detection (RAD) https://gi
 
 ## Installing
 
-Not yet released to clojars
+Add the following to your [Leiningen](http://github.com/technomancy/leiningen) `project.clj`:
+
+![latest clj-kafka version](https://clojars.org/clj-rad/latest-version.svg)
 
 ## Usage
 
