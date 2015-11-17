@@ -1,5 +1,6 @@
 (ns clj-rad.core
-  (:require [clojure.math.numeric-tower :as math]))
+  (:require [clojure.set                :refer [difference]]
+            [clojure.math.numeric-tower :as math]))
 
 (def days-per-week 7)
 (def LPENALTY_DEFAULT_NO_DIFF 1.0)
@@ -19,7 +20,7 @@
   [complete-dateset data]
   (->> data
        unique-dates
-       (clojure.set/difference complete-dateset)
+       (difference complete-dateset)
        (map #(hash-map :date % :value 0))
        (into data)))
 
