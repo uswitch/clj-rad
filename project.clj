@@ -1,4 +1,4 @@
-(defproject clj-rad "0.3.0"
+(defproject clj-rad "0.3.1"
   :description "Clojure wrapper for Netflix Robust Anomaly Detection (RAD) library"
   :url "https://github.com/uswitch/clj-rad"
   :license {:name "Eclipse Public License"

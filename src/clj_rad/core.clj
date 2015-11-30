@@ -9,8 +9,8 @@
 (defn- lpenalty []
   LPENALTY_DEFAULT_NO_DIFF)
 
-(defn- spenalty [ncols nrows]
-  (/ SPENALTY_DEFAULT_NO_DIFF (math/sqrt (max ncols nrows))))
+(defn- spenalty [n-days nrows]
+  (/ SPENALTY_DEFAULT_NO_DIFF (math/sqrt (max n-days (/ nrows n-days)))))
 
 (defn- unique-dates
   [data]
@@ -61,8 +61,8 @@
                :error                  (mapv #(* stdev %) error)}))
 
 (defn rpca
-  [nrows ncols data]
-  (let [rsvd (org.surus.math.RPCA. (to-matrix ncols data) (lpenalty) (spenalty nrows ncols))
+  [n-days nrows ncols data]
+  (let [rsvd (org.surus.math.RPCA. (to-matrix ncols data) (lpenalty) (spenalty n-days nrows))
         unroll (fn [d] (for [row (.getData d) col row] col))]
     {:raw-data               data
      :low-rank-approximation (unroll (.. rsvd getL))
@@ -74,7 +74,7 @@
         stats (statistics clean-data)]
     (->> clean-data
          (transform stats)
-         (rpca (/ n-days days-per-week) days-per-week)
+         (rpca n-days (/ n-days days-per-week) days-per-week)
          (untransform stats))))
 
 (defn rpca-outliers-daily
