@@ -74,7 +74,7 @@
         stats (statistics clean-data)]
     (->> clean-data
          (transform stats)
-         (rpca n-days (/ n-days days-per-week) days-per-week)
+         (rpca n-days (count clean-data) days-per-week)
          (untransform stats))))
 
 (defn rpca-outliers-daily
