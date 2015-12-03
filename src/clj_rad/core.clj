@@ -1,8 +1,7 @@
 (ns clj-rad.core
-  (:require [clojure.set                :refer [difference]]
-            [clojure.math.numeric-tower :as math]))
+  (:require [clojure.math.numeric-tower :as math]))
 
-(def days-per-week 7)
+(def DAYS-PER-WEEK 7)
 (def LPENALTY_DEFAULT_NO_DIFF 1.0)
 (def SPENALTY_DEFAULT_NO_DIFF 1.4)
 
@@ -12,24 +11,16 @@
 (defn- spenalty [n-days nrows]
   (/ SPENALTY_DEFAULT_NO_DIFF (math/sqrt (max n-days (/ nrows n-days)))))
 
-(defn- unique-dates
+(defn- distinct-dates
   [data]
-  (into #{} (map :date data)))
-
-(defn- pad-missing-dates
-  [complete-dateset data]
+  """
+  This makes the assumption that the complete set of data across all features contains a full date set. 
+  If there is only a single feature and it has missing data then, the assumption breaks down and RAD will fail
+  """
   (->> data
-       unique-dates
-       (difference complete-dateset)
-       (map #(hash-map :date % :value 0))
-       (into data)))
-
-(defn- prepare
-  [date-set data]
-  (->> data
-      (pad-missing-dates date-set)
-      (sort-by :date)
-      (mapv :value)))
+       (map :date)
+       (apply sorted-set)
+       (map #(hash-map :date % :value 0))))
 
 (defn- statistics
   [data]
@@ -69,16 +60,21 @@
      :sparse                 (unroll (.. rsvd getS))
      :error                  (unroll (.. rsvd getE))}))
 
-(defn rad [n-days complete-dateset data]
-  (let [clean-data (prepare complete-dateset data)
-        stats (statistics clean-data)]
-    (->> clean-data
+(defn rad [n-days data]
+  (let [unrolled-data (mapv :value data)
+        stats         (statistics unrolled-data)]
+    (->> unrolled-data
          (transform stats)
-         (rpca n-days (count clean-data) days-per-week)
+         (rpca n-days (count data) DAYS-PER-WEEK)
          (untransform stats))))
 
+(defn repair-missing-dates
+  [group group-data distinct-dates]
+  (for [{:keys [date] :as day} distinct-dates]
+    (merge day group (->> group-data (filter #(= date (:date %))) first))))
+
 (defn rpca-outliers-daily
-  [data n-days group-columns]
+  [data freq group-columns]
   """
   expects that you have already aggregated the data at a daily grain, performed a 'group by' on the keys of interest.
   The date column must always be labeled :date and daterange must be a multiple of 7 days ie: 7,14,21,28..
@@ -89,6 +85,7 @@
      {:date 20150102 :a 1 :b 1 :value 11}
      {:date 20150102 :a 1 :b 2 :value 12}]
   """
-  (let [complete-dateset (unique-dates data)]
+  (let [distinct-dates (distinct-dates data)]
     (for [[group group-data] (group-by #(select-keys % group-columns) data)]
-      (merge (rad n-days complete-dateset group-data) {:group group}))))
+      (merge {:group group}
+             (rad freq (repair-missing-dates group group-data distinct-dates))))))

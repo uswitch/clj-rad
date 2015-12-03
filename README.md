@@ -13,10 +13,10 @@ Add the following to your [Leiningen](http://github.com/technomancy/leiningen) `
 ### Code
 
 ```clojure
-(:require [clj-rad.core :as rad])
+(require '[clj-rad.core :as rad])
 
 (def data [{:date 20150101 :a 1 :b 1 :value 14}
-{:date 20150102 :a 1 :b 1 :value 35}
+{:date 20150102 :a 1 :b 2 :value 35}
 {:date 20150103 :a 1 :b 1 :value 12}
 {:date 20150104 :a 1 :b 1 :value 10}
 {:date 20150105 :a 1 :b 1 :value 13}
