@@ -11,27 +11,16 @@
 (defn- spenalty [n-days nrows]
   (/ SPENALTY_DEFAULT_NO_DIFF (math/sqrt (max n-days (/ nrows n-days)))))
 
-(defn- distinct-dates
-  [data]
-  """
-  This makes the assumption that the complete set of data across all features contains a full date set. 
-  If there is only a single feature and it has missing data then, the assumption breaks down and RAD will fail
-  """
-  (->> data
-       (map :date)
-       (apply sorted-set)
-       (map #(hash-map :date % :value 0))))
-
 (defn- statistics
   [data]
-  (let [n (count data)
-        mean (/ (reduce + data) n)
+  (let [n        (count data)
+        mean     (/ (reduce + data) n)
         variance (/ (reduce + (map #(math/expt (- % mean) 2) data)) (dec n))
-        stdev (math/sqrt variance)]
+        stdev    (math/sqrt variance)]
     {:mean mean :stdev stdev}))
 
 (defn- normalise [mean stdev]
-  (fn [x] (/ (- x mean) stdev)))
+  (fn [x] (if (zero? stdev) 0 (/ (- x mean) stdev))))
 
 (defn- un-normalise [mean stdev]
   (fn [x] (+ (* x stdev) mean)))
@@ -53,7 +42,7 @@
 
 (defn rpca
   [n-days nrows ncols data]
-  (let [rsvd (org.surus.math.RPCA. (to-matrix ncols data) (lpenalty) (spenalty n-days nrows))
+  (let [rsvd   (org.surus.math.RPCA. (to-matrix ncols data) (lpenalty) (spenalty n-days nrows))
         unroll (fn [d] (for [row (.getData d) col row] col))]
     {:raw-data               data
      :low-rank-approximation (unroll (.. rsvd getL))
@@ -68,10 +57,12 @@
          (rpca n-days (count data) DAYS-PER-WEEK)
          (untransform stats))))
 
-(defn repair-missing-dates
-  [group group-data distinct-dates]
-  (for [{:keys [date] :as day} distinct-dates]
-    (merge day group (->> group-data (filter #(= date (:date %))) first))))
+(defn build-padded-dataset [data group-columns]
+  (let [data-lookup (group-by #(select-keys % (cons :date group-columns)) data)]
+    (for [date  (->> data (map :date) distinct sort)
+          group (->> data (group-by #(select-keys % group-columns)) keys)
+          :let [group (assoc group :date date)] ]
+      (assoc group :value (-> group data-lookup first :value (or 0))))))
 
 (defn rpca-outliers-daily
   [data freq group-columns]
@@ -85,7 +76,6 @@
      {:date 20150102 :a 1 :b 1 :value 11}
      {:date 20150102 :a 1 :b 2 :value 12}]
   """
-  (let [distinct-dates (distinct-dates data)]
-    (for [[group group-data] (group-by #(select-keys % group-columns) data)]
-      (merge {:group group}
-             (rad freq (repair-missing-dates group group-data distinct-dates))))))
+  (let [padded-data (build-padded-dataset data group-columns)]
+    (for [[group group-data] (group-by #(select-keys % group-columns) padded-data)]
+      (merge {:group group} (rad freq group-data)))))
